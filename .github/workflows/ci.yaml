@@ -1,0 +1,48 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build Go App
+        run: go build -o server ./cmd/server
+
+      - name: Run Tests (optional)
+        run: echo "No tests yet."
+
+  docker:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+
+      - name: Build Docker Image
+        run: |
+          IMAGE_NAME="ghcr.io/${{ secrets.GHCR_USERNAME }}/go-cicd-demo:latest"
+          docker build -t $IMAGE_NAME .
+
+      - name: Push Docker Image to GHCR
+        run: |
+          IMAGE_NAME="ghcr.io/${{ secrets.GHCR_USERNAME }}/go-cicd-demo:latest"
+          docker push $IMAGE_NAME
+
